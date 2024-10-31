@@ -25,7 +25,13 @@ namespace lab {
         // Internal helper functions
         void extendTree(u64 pos);
         void setSuffixIndexByDFS(SuffixNodePtr node, u64 labelHeight);
-        void findLCSUtil(SuffixNodePtr node, u64 depth, u64& maxLength, u64& maxEndIndex, u64 splitPoint);
+        void findLCSUtil(
+            SuffixNodePtr node, 
+            u64 depth, 
+            u64& maxLength, 
+            u64& maxEndIndex, 
+            u64 splitPoint
+        );
 
         // Tree properties
         StringPtr text;                        // The input string
@@ -39,7 +45,11 @@ namespace lab {
         U64Ptr splitEnd;
         u64 size; // Size of the input string
 
+        friend std::ostream& operator<<(std::ostream& os, SuffixTree const& t);
+
     };
+
+    std::ostream& operator<<(std::ostream& os, SuffixTree const& t);
 }
 
 #endif // SUFFIX_TREE_HPP

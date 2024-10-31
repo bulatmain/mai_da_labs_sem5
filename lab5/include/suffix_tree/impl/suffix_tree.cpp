@@ -1,5 +1,9 @@
 #include "../suffix_tree.hpp"
 
+#include <queue>
+#include <functional>
+#include <iostream>
+
 namespace lab {
 
     SuffixTree::SuffixTree(const std::string& text) 
@@ -55,7 +59,7 @@ namespace lab {
                 // Link the last created internal node to this one if necessary
                 if (lastNewNode != nullptr) {
                     lastNewNode->setSuffixLink(activeNode);
-                    lastNewNode = nullptr;
+                    lastNewNode = activeNode->getChildren()[activeChar];
                 }
             } else {
                 // There is an edge, find the next node
@@ -179,7 +183,7 @@ namespace lab {
         findLCSUtil(root, 0, maxLength, maxEndIndex, splitPoint);
 
         // Boundary check to prevent out-of-bounds errors
-        if (maxEndIndex < maxLength || maxEndIndex >= combinedString.size()) {
+        if (maxEndIndex + 1 < maxLength || maxEndIndex >= combinedString.size()) {
             return ""; // No valid LCS found or invalid indices
         }
 
@@ -194,45 +198,64 @@ namespace lab {
         u64& maxEndIndex, 
         u64 splitPoint
     ) {
-    if (!node) return;
+        if (!node) return;
 
-    bool containsS1Suffix = false;
-    bool containsS2Suffix = false;
+        bool containsS1Suffix = false;
+        bool containsS2Suffix = false;
 
-    // Check if it's a leaf node and update flags based on suffix index
-    if (node->getChildren().empty()) {
-        u64 suffixIndex = size - (node->getEnd() - node->getStart() + 1);
-        if (suffixIndex < splitPoint) {
-            containsS1Suffix = true;
-        } else {
-            containsS2Suffix = true;
-        }
-    } else {
-        // Traverse children to gather information
-        for (auto& [key, child] : node->getChildren()) {
-            findLCSUtil(
-                child, 
-                depth + (child->getEnd() - child->getStart() + 1), 
-                maxLength, 
-                maxEndIndex, 
-                splitPoint
-            );
-            
-            // Gather S1/S2 suffix information from child nodes
-            if (child->getSuffixIndex() < splitPoint) {
-                containsS1Suffix = true;
-            } else if (child->getSuffixIndex() >= splitPoint) {
-                containsS2Suffix = true;
+        if (!node->getChildren().empty()) {
+            // Traverse children to gather information
+            for (auto& [key, child] : node->getChildren()) {
+                findLCSUtil(
+                    child, 
+                    depth + (child->getEnd() - child->getStart() + 1), 
+                    maxLength, 
+                    maxEndIndex, 
+                    splitPoint
+                );
+                
+                // Gather S1/S2 suffix information from child nodes
+                auto index = child->getSuffixIndex();
+                if (index == limit<u64>::max()) {
+                    continue;
+                } else if (index < splitPoint) {
+                    containsS1Suffix = true;
+                } else if (index >= splitPoint) {
+                    containsS2Suffix = true;
+                }
             }
         }
+
+        // Update the LCS properties if this node contains both S1 and S2 suffixes
+        if (containsS1Suffix && containsS2Suffix && depth > maxLength) {
+            maxLength = depth;
+            maxEndIndex = node->getEnd();
+        }
     }
 
-    // Update the LCS properties if this node contains both S1 and S2 suffixes
-    if (containsS1Suffix && containsS2Suffix && depth > maxLength) {
-        maxLength = depth;
-        maxEndIndex = node->getEnd();
-    }
-}
 
+    std::ostream& operator<<(std::ostream& os, const SuffixTree& tree) {
+        std::function<void(SuffixTree::SuffixNodePtr, int)> printTree;
+        
+        auto text = tree.text;
+
+        printTree = [&](SuffixTree::SuffixNodePtr node, u8 depth) {
+            if (node == nullptr) return;
+
+            if (node->getStart() != limit<u64>::max()) {  // Skip root node
+                os << std::string(depth * 2, ' ') 
+                << text->substr(node->getStart(), node->getEnd() - node->getStart() + 1)
+                << (node->getChildren().empty() ? " [" + std::to_string(node->getSuffixIndex()) + "]" : "") 
+                << "\n";
+            }
+
+            for (const auto &child : node->getChildren()) {
+                printTree(child.second, depth + 1);
+            }
+        };
+
+        printTree(tree.root, 0);
+        return os;
+    }
 
 }

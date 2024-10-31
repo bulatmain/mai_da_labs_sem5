@@ -9,7 +9,7 @@ class SuffixTreeTest : public ::testing::Test {
 protected:
     void SetUp() override {
         // Initialize sample text and suffix tree
-        sampleText = "bananaban";
+        sampleText = "abcabxabcd#";
         tree = std::make_unique<SuffixTree>(sampleText);
     }
 
@@ -19,23 +19,23 @@ protected:
 
 // Test cases for searchPattern
 TEST_F(SuffixTreeTest, PatternExistsAtBeginning) {
-    EXPECT_TRUE(tree->searchPattern("ban"));
+    EXPECT_TRUE(tree->searchPattern("abc"));
 }
 
 TEST_F(SuffixTreeTest, PatternExistsInMiddle) {
-    EXPECT_TRUE(tree->searchPattern("nan"));
+    EXPECT_TRUE(tree->searchPattern("bxa"));
 }
 
 TEST_F(SuffixTreeTest, PatternExistsAtEnd) {
-    EXPECT_TRUE(tree->searchPattern("naban"));
+    EXPECT_TRUE(tree->searchPattern("abcd"));
 }
 
 TEST_F(SuffixTreeTest, NonExistentPattern) {
-    EXPECT_FALSE(tree->searchPattern("apple"));
+    EXPECT_FALSE(tree->searchPattern("xbca"));
 }
 
 TEST_F(SuffixTreeTest, PatternLongerThanText) {
-    EXPECT_FALSE(tree->searchPattern("bananabanana"));
+    EXPECT_FALSE(tree->searchPattern("abcabxabcdabc"));
 }
 
 TEST_F(SuffixTreeTest, SingleCharacterPatternExists) {
@@ -55,7 +55,7 @@ TEST(SuffixTreeFindLCSTest, LCSExistsBetweenTwoStrings) {
     std::string s1 = "banana";
     std::string s2 = "bandana";
     SuffixTree tree(s1 + "#" + s2 + "$");
-    EXPECT_EQ(tree.findLCS(s1, s2), "ban");
+    EXPECT_EQ(tree.findLCS(s1, s2), "ana");
 }
 
 TEST(SuffixTreeFindLCSTest, NoCommonSubstring) {
