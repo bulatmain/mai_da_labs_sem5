@@ -1,4 +1,176 @@
-#include "../suffix_tree.hpp"
+#ifndef TYPE_ALIASES_HPP
+#define TYPE_ALIASES_HPP
+
+#include <cinttypes>
+#include <limits>
+#include <memory>
+#include <vector>
+#include <string>
+
+namespace lab {
+    // Integer type aliases
+    using u64 = uint64_t;
+    using i64 = int64_t;
+    using u32 = uint32_t;
+    using i32 = int32_t;
+    using u16 = uint16_t;
+    using i16 = int16_t;
+    using u8 = uint8_t;
+    using i8 = int8_t;
+
+    template <class T>
+    using limit = std::numeric_limits<T>;
+
+    // Alias for shared_ptr of basic types
+    using CharPtr = std::shared_ptr<char>;
+    using U64Ptr = std::shared_ptr<u64>;
+    using I64Ptr = std::shared_ptr<i64>;
+}
+
+#endif // TYPE_ALIASES_HPP
+
+
+#ifndef SUFFIX_NODE_HPP
+#define SUFFIX_NODE_HPP
+
+#include <map>
+#include <memory>
+
+namespace lab {
+
+    // Forward declaration of SuffixTree
+    class SuffixTree;
+
+    // SuffixNode class representing a node in the suffix tree
+    class SuffixNode {
+    public:
+        using SuffixNodePtr = std::shared_ptr<SuffixNode>;
+        using ChildrenMap = std::map<char, SuffixNodePtr>;
+
+        // Constructors
+        SuffixNode();
+        SuffixNode(u64 start, U64Ptr end);
+
+        // Node properties
+        u64 getStart() const;
+        u64 getEnd() const;
+        ChildrenMap& getChildren();
+        SuffixNodePtr getSuffixLink();
+        void setSuffixLink(SuffixNodePtr node);
+
+        // Suffix Index
+        void setSuffixIndex(u64 index);
+        u64 getSuffixIndex() const;
+
+    private:
+        u64 start;
+        U64Ptr end;
+        ChildrenMap children;
+        SuffixNodePtr suffixLink; // Link to another node in the tree
+        u64 suffixIndex;          // Suffix index for leaf nodes (default: -1 if not a leaf)
+
+        friend SuffixTree;
+    };
+}
+
+#endif // SUFFIX_NODE_HPP
+
+#ifndef SUFFIX_TREE_HPP
+#define SUFFIX_TREE_HPP
+
+#include <string>
+#include <vector>
+
+namespace lab {
+
+    class SuffixTree {
+    public:
+        using StringPtr = std::shared_ptr<std::string>;
+        using SuffixNodePtr = SuffixNode::SuffixNodePtr;
+
+        // Constructors
+        SuffixTree(const std::string& text);
+
+        // Public interface
+        void buildTree(const std::string& text);
+        bool searchPattern(const std::string& pattern);
+        static std::pair<u64, std::vector<u64>> findLCS(const std::string& S1, const std::string& S2);
+
+    private:
+        // Internal helper functions
+        void extendTree(u64 pos);
+        void setSuffixIndexByDFS(SuffixNodePtr node, u64 labelHeight);
+        static void findLCSUtil(
+            SuffixNodePtr node, 
+            u64 depth, 
+            u64& maxLength,
+            u64 splitPoint,
+            std::map<u64, u64>& nodeCSLengths
+        );
+
+        // Tree properties
+        StringPtr text;                        // The input string
+        SuffixNodePtr root;        // Root of the suffix tree
+        SuffixNodePtr activeNode;  // Active node for construction
+        u64 activeEdge;
+        u64 activeLength;
+        u64 remainingSuffixCount;
+        U64Ptr leafEnd;
+        U64Ptr rootEnd;
+        U64Ptr splitEnd;
+        u64 size; // Size of the input string
+
+        friend std::ostream& operator<<(std::ostream& os, SuffixTree const& t);
+
+    };
+
+    std::ostream& operator<<(std::ostream& os, SuffixTree const& t);
+}
+
+#endif // SUFFIX_TREE_HPP
+
+namespace lab {
+
+    SuffixNode::SuffixNode() 
+        :   start(0ul), 
+            end(nullptr), 
+            suffixLink(nullptr), 
+            suffixIndex(limit<u64>::max()) {}
+
+    SuffixNode::SuffixNode(u64 start, U64Ptr end)
+        :   start(start), 
+            end(end), 
+            suffixLink(nullptr), 
+            suffixIndex(limit<u64>::max()) {}
+
+    u64 SuffixNode::getStart() const {
+        return start;
+    }
+
+    u64 SuffixNode::getEnd() const {
+        return end ? *end : 0;
+    }
+
+    SuffixNode::ChildrenMap& SuffixNode::getChildren() {
+        return children;
+    }
+
+    SuffixNode::SuffixNodePtr SuffixNode::getSuffixLink() {
+        return suffixLink;
+    }
+
+    void SuffixNode::setSuffixLink(SuffixNodePtr node) {
+        suffixLink = node;
+    }
+
+    void SuffixNode::setSuffixIndex(u64 index) {
+        suffixIndex = index;
+    }
+
+    u64 SuffixNode::getSuffixIndex() const {
+        return suffixIndex;
+    }
+}
 
 #include <queue>
 #include <functional>
@@ -136,21 +308,18 @@ namespace lab {
     }
 
     // Searches for a pattern in the suffix tree
-    std::set<u64> SuffixTree::searchPattern(const std::string& pattern) {
-        if (pattern == "") {
-            return {};
-        }
+    bool SuffixTree::searchPattern(const std::string& pattern) {
         SuffixNodePtr currentNode = root; // Start from the root node
         u64 patternIndex = 0;             // Track the current index of the pattern
 
         // Traverse while there are characters left in the pattern
-        while (patternIndex < pattern.size()) { 
+        while (patternIndex < pattern.size()) {
             char currentChar = pattern[patternIndex];
 
             // Check if the current character exists in the current node's children
             if (currentNode->getChildren().find(currentChar) == currentNode->getChildren().end()) {
                 // The current character is not found among the children, pattern does not exist
-                return {};
+                return false;
             }
 
             // Move to the next node
@@ -162,7 +331,7 @@ namespace lab {
             for (u64 i = 0; i <= (edgeEnd - edgeStart) && patternIndex < pattern.size(); ++i) {
                 // If characters don't match, pattern is not found
                 if ((*text)[edgeStart + i] != pattern[patternIndex]) {
-                    return {};
+                    return false;
                 }
                 patternIndex++; // Move to the next character in the pattern
             }
@@ -172,51 +341,11 @@ namespace lab {
         }
 
         // If the entire pattern has been successfully traversed, it exists in the text
-        std::set<u64> indexes;
-        std::queue<SuffixNodePtr> order;
-        order.push(currentNode);
-        while (!order.empty()) {
-            auto& node = order.front();
-            order.pop();
-            if (node->getChildren().empty()) {
-                indexes.insert(node->suffixIndex);
-            }
-            for (auto& [ch, child] : node->getChildren()) {
-                order.push(child);
-            }
-        }
-        return indexes;
-    }
-
-
-    std::pair<u64, std::set<std::string>> SuffixTree::findLCSString(const std::string& s1, const std::string& s2) {
-        std::string combinedString = s1 + "#" + s2 + "$";
-        SuffixTree tree(combinedString);
-        
-        u64 maxLength = 0;
-        u64 splitPoint = s1.size();
-
-        std::map<u64, u64> nodeCSLengths;
-
-        findLCSUtil(tree.root, 0, maxLength, splitPoint, nodeCSLengths);
-
-        std::set<std::string> lcs;
-        for (auto& [edge, length] : nodeCSLengths) {
-            if (length == maxLength) {
-                auto start = (edge == limit<u64>::max() ? 
-                            combinedString.size() : edge)
-                    + 1 - maxLength;
-
-                lcs.insert(s1.substr(start, maxLength));
-            }
-        }
-
-        return {maxLength, lcs};
-        
+        return true;
     }
 
     std::pair<u64, std::vector<u64>> SuffixTree::findLCS(const std::string& s1, const std::string& s2) {
-        std::string combinedString = s1 + "#" + s2 + "$";
+        std::string combinedString = s1 + "\t" + s2 + "\r";
         SuffixTree tree(combinedString);
         
         u64 maxLength = 0;
@@ -239,6 +368,7 @@ namespace lab {
 
         return {maxLength, indexes};
     }
+
 
     void SuffixTree::findLCSUtil(
         SuffixNodePtr node, 
@@ -282,7 +412,6 @@ namespace lab {
     }
 
 
-
     std::ostream& operator<<(std::ostream& os, const SuffixTree& tree) {
         std::function<void(SuffixTree::SuffixNodePtr, u8)> printTree;
         
@@ -307,4 +436,45 @@ namespace lab {
         return os;
     }
 
+}
+
+
+#include <iostream>
+#include <set>
+
+using namespace lab;
+
+int main() {
+    std::string s1;
+    std::string s2;
+
+
+    std::getline(std::cin, s1);
+    std::getline(std::cin, s2);
+
+	if (s1.size() < s2.size()) {
+		auto& s = s1;
+		s1 = std::move(s2);
+    	s2 = std::move(s);
+	}
+
+    auto ans = SuffixTree::findLCS(s1, s2);
+    auto length = ans.first;
+    auto indexes = ans.second;
+
+	if (length == 0) {
+		return 0;
+	}
+
+    std::cout << length << "\n";
+    std::set<std::string> lcs;
+    for (auto& index : indexes) {
+        lcs.insert(s1.substr(index, length));
+    }
+
+    for (auto& s : lcs) {
+        std::cout << s << "\n";
+    }
+
+    return 0;
 }

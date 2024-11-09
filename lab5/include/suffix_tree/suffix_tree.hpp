@@ -5,6 +5,7 @@
 #include "../type_aliases.hpp"
 #include <string>
 #include <vector>
+#include <set>
 
 namespace lab {
 
@@ -18,19 +19,20 @@ namespace lab {
 
         // Public interface
         void buildTree(const std::string& text);
-        bool searchPattern(const std::string& pattern);
-        std::string findLCS(const std::string& S1, const std::string& S2);
+        std::set<u64> searchPattern(const std::string& pattern);
+        static std::pair<u64, std::vector<u64>> findLCS(const std::string& s1, const std::string& s2);
+        static std::pair<u64, std::set<std::string>> findLCSString(const std::string& s1, const std::string& s2);
 
     private:
         // Internal helper functions
         void extendTree(u64 pos);
         void setSuffixIndexByDFS(SuffixNodePtr node, u64 labelHeight);
-        void findLCSUtil(
+        static void findLCSUtil(
             SuffixNodePtr node, 
             u64 depth, 
-            u64& maxLength, 
-            u64& maxEndIndex, 
-            u64 splitPoint
+            u64& maxLength,
+            u64 splitPoint,
+            std::map<u64, u64>& nodeCSLengths
         );
 
         // Tree properties
