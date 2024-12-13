@@ -1,84 +1,89 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <numeric>
-#include <limits>
-#include <cassert>
 
-namespace lab {
-    using u32 = uint32_t;
-    using u64 = uint64_t;
-    template <class T>
-    using vec = std::vector<T>;
+class Solver {
 
-    u32 const INF = std::numeric_limits<u32>::max();
-
-    const double EPS = 1E-9;
-
-    double fabs(double const& x) {
-        return x < 0 ? -x : x;
+public:
+    Solver() {
+        readInput();
     }
 
-    u32 compute_rank(vec<vec<double>> A) {
-        u64 n = A.size();
-        u64 m = A[0].size();
-
-        u32 rank = 0;
-        vec<char> row_selected(n, 0);
-        for (u64 i = 0; i < m; ++i) {
-            u64 j;
-            for (j = 0; j < n; ++j) {
-                if (!row_selected[j] && fabs(A[j][i]) > EPS)
-                    break;
+    void solve() {
+        for (int i = 0; i < n; ++i) {
+            int index = findRow(matrix, i);
+            if (index == -1) {
+                std::cout << "-1" << std::endl;
+                return;
             }
 
-            if (j != n) {
-                ++rank;
-                row_selected[j] = 1;
-                for (u64 p = i + 1; p < m; ++p) {
-                    A[j][p] /= A[j][i];
-                }
-                for (u64 k = 0; k < n; ++k) {
-                    if (k != j && fabs(A[k][i]) > EPS) {
-                        for (u64 p = i + 1; p < m; ++p)
-                            A[k][p] -= A[j][p] * A[k][i];
-                    }
-                }
+            std::swap(matrix[i], matrix[index]);
+            res.push_back(matrix[i][n + 1]);
+            substractRows(matrix, i);
+        }
+
+        std::sort(res.begin(), res.end());
+        for (int i = 0; i < res.size(); ++i) {
+            std::cout << res[i] + 1;
+            if (i == res.size() - 1) {
+                std::cout << std::endl;
+            } else {
+                std::cout << " ";
             }
         }
-        return rank;
-    }
-}
 
-using namespace lab;
+    }
+
+private:
+    const int MAX_NUM = 50;
+    int m, n;
+
+    std::vector<int> res;
+    std::vector<std::vector<double>> matrix;
+                            
+
+    void readInput() {    
+        std::cin >> m >> n;
+
+        matrix.assign(m, std::vector<double> (n + 2));
+
+        for (int i = 0; i < m; ++i) {
+            for (int j = 0; j < n + 1; ++j) {
+                std::cin >> matrix[i][j];
+            }
+            matrix[i][n + 1] = i;
+        }
+    }
+
+    int findRow(std::vector<std::vector<double>>& v, int t) {
+        int minPrice = MAX_NUM + 1;
+        int index = -1;
+        for (int i = t; i < m; ++i) {
+            if ((v[i][t] != 0.0) && (v[i][n] < minPrice)) {
+                index = i;
+                minPrice = v[i][n];
+            }
+        }
+        return index;
+    }
+
+    void substractRows(std::vector<std::vector<double>>& v, int t) {
+        for (int i = t + 1; i < m; ++i) {
+            double coeff = v[i][t] / v[t][t];
+            for (int j = t; j < n; ++j) {
+                v[i][j] -= v[t][j] * coeff;
+            }
+        }
+    }
+
+};
+
+
 
 int main() {
-    u32 M, N;
-    std::cin >> M >> N;
+    Solver solver;
 
-    if (M < N) {
-        std::cout << -1 << std::endl;
-        return 0;
-    }
-
-    vec<vec<double>> matrix(M, vec<double>(N, 0));
-    vec<u32> costs(M);
-
-    for (u32 i = 0; i < M; ++i) {
-        for (u32 j = 0; j < N; ++j) {
-            std::cin >> matrix[i][j];
-        }
-        std::cin >> costs[i];
-    }
-
-    if (compute_rank(matrix) != N) {
-        std::cout << -1 << std::endl;
-    } else {
-        for (u32 i = 0; i < M; ++i) {
-            std::cout << i + 1 << " ";
-        }
-        std::cout << std::endl;
-    }
+    solver.solve();
 
     return 0;
 }
